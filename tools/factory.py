@@ -81,12 +81,12 @@ def find_glyphs(ch, style):
         font, cmap, gs, upem = load_font(spec)
         name = cmap.get(cp)
         if name and name in gs:
-            yield gs[name], upem, spec.path
+            yield gs[name], upem, spec.path, gs
 
 
 def find_glyph(ch, style):
     for g in find_glyphs(ch, style):
-        return g
+        return g[:3]
     return None, None, None
 
 
@@ -137,32 +137,43 @@ class FlattenPen(BasePen):
 
 
 def rdp(pts, eps):
-    """Douglas-Peucker（閉じた輪郭用：一番遠い2点で2分割して処理）"""
+    """Douglas-Peucker（閉じた輪郭用：一番遠い2点で2分割して処理）。距離はまとめて numpy で計算"""
     if len(pts) < 4:
         return pts
-    a = 0
-    d = [math.dist(pts[0], p) for p in pts]
-    b = int(np.argmax(d))
+    P = np.asarray(pts, dtype=float)
+    b = int(np.argmax(np.hypot(P[:, 0] - P[0, 0], P[:, 1] - P[0, 1])))
 
-    def simp(seq):
-        if len(seq) < 3:
-            return seq
-        p0, p1 = np.array(seq[0]), np.array(seq[-1])
-        v = p1 - p0
-        L = np.hypot(*v)
-        best, bi = -1, 0
-        for i in range(1, len(seq) - 1):
-            q = np.array(seq[i]) - p0
-            dist = abs(v[0] * q[1] - v[1] * q[0]) / L if L > 1e-12 else np.hypot(*q)
-            if dist > best:
-                best, bi = dist, i
-        if best > eps:
-            return simp(seq[: bi + 1])[:-1] + simp(seq[bi:])
-        return [seq[0], seq[-1]]
+    def simp(Q):
+        n = len(Q)
+        if n < 3:
+            return list(range(n))
+        keep = np.zeros(n, dtype=bool)
+        keep[0] = keep[-1] = True
+        stack = [(0, n - 1)]
+        while stack:
+            i, j = stack.pop()
+            if j - i < 2:
+                continue
+            seg = Q[i + 1 : j]
+            v = Q[j] - Q[i]
+            L = math.hypot(v[0], v[1])
+            if L > 1e-12:
+                d = np.abs(v[0] * (seg[:, 1] - Q[i, 1]) - v[1] * (seg[:, 0] - Q[i, 0])) / L
+            else:
+                d = np.hypot(seg[:, 0] - Q[i, 0], seg[:, 1] - Q[i, 1])
+            k = int(np.argmax(d))
+            if d[k] > eps:
+                m = i + 1 + k
+                keep[m] = True
+                stack.append((i, m))
+                stack.append((m, j))
+        return list(np.nonzero(keep)[0])
 
-    left = simp(pts[a : b + 1])
-    right = simp(pts[b:] + [pts[0]])
-    out = left[:-1] + right[:-1]
+    left = P[: b + 1]
+    right = np.vstack([P[b:], P[:1]])
+    li = simp(left)
+    ri = simp(right)
+    out = [tuple(left[i]) for i in li[:-1]] + [tuple(right[i]) for i in ri[:-1]]
     return out
 
 
@@ -252,47 +263,64 @@ def bridge_holes(outer, holes, coords):
 
 
 def earclip(ring, coords):
-    """CCW の 1 本の輪（橋渡しで同じ頂点番号が 2 回出てもよい）を三角形に分ける"""
-    idx = list(ring)
+    """CCW の 1 本の輪（橋渡しで同じ頂点番号が 2 回出てもよい）を三角形に分ける
+    へこんだ点（reflex）だけを覚えておき、耳の判定はその点だけで行う"""
+    n = len(ring)
+    if n < 3:
+        return []
+    P = [coords[i] for i in ring]
+    prv = [(k - 1) % n for k in range(n)]
+    nxt = [(k + 1) % n for k in range(n)]
+
+    def cr(k):
+        return _cross(P[prv[k]], P[k], P[nxt[k]])
+
+    reflex = {k for k in range(n) if cr(k) <= 1e-14}
     tris = []
-    guard = 0
-    while len(idx) > 3 and guard < 100000:
-        guard += 1
-        n = len(idx)
-        found = False
-        best_k, best_c = None, -1e18
-        for k in range(n):
-            ia, ib, ic = idx[k - 1], idx[k], idx[(k + 1) % n]
-            a, b, c = coords[ia], coords[ib], coords[ic]
-            cr = _cross(a, b, c)
-            if cr > best_c:
-                best_c, best_k = cr, k
-            if cr <= 1e-14:
-                continue
+    alive = n
+    k = 0
+    stall = 0
+    while alive > 3:
+        a, c = prv[k], nxt[k]
+        ear = False
+        if k not in reflex:
             ear = True
-            for j in range(n):
-                ij = idx[j]
-                if ij in (ia, ib, ic):
+            pa, pb, pc = P[a], P[k], P[c]
+            ga, gb, gc = ring[a], ring[k], ring[c]
+            for r in reflex:
+                if r in (a, k, c) or ring[r] in (ga, gb, gc):
                     continue
-                # 凸な点は耳の中に入れない（調べるのはへこんだ点だけでよい）
-                pj = coords[ij]
-                if _cross(coords[idx[j - 1]], pj, coords[idx[(j + 1) % n]]) > 1e-14:
-                    continue
-                if _in_tri(pj, a, b, c):
+                if _in_tri(P[r], pa, pb, pc):
                     ear = False
                     break
-            if ear:
-                tris.append((ia, ib, ic))
-                idx.pop(k)
-                found = True
-                break
-        if not found:
+        if not ear and stall > alive:
             # 形が崩れている所は一番とがった点を切り落として先へ進む
-            k = best_k
-            tris.append((idx[k - 1], idx[k], idx[(k + 1) % n]))
-            idx.pop(k)
-    if len(idx) == 3:
-        tris.append(tuple(idx))
+            best, bc, j = k, -1e18, k
+            for _ in range(alive):
+                v = cr(j)
+                if v > bc:
+                    bc, best = v, j
+                j = nxt[j]
+            k = best
+            a, c = prv[k], nxt[k]
+            ear = True
+        if ear:
+            tris.append((ring[a], ring[k], ring[c]))
+            nxt[a], prv[c] = c, a
+            reflex.discard(k)
+            alive -= 1
+            for j in (a, c):
+                if cr(j) > 1e-14:
+                    reflex.discard(j)
+                else:
+                    reflex.add(j)
+            k = c
+            stall = 0
+        else:
+            k = nxt[k]
+            stall += 1
+    a, c = prv[k], nxt[k]
+    tris.append((ring[a], ring[k], ring[c]))
     return [t for t in tris if abs(_cross(coords[t[0]], coords[t[1]], coords[t[2]])) > 1e-12]
 
 
@@ -314,13 +342,17 @@ def delaunay_fill(outer, holes, coords, spacing=0.03):
                 pts_idx.append(len(coords) - 1)
     P = np.array([coords[i] for i in pts_idx])
     D = Delaunay(P)
-    out_r = [coords[i] for i in outer]
-    hole_r = [[coords[i] for i in h] for h in holes]
+    from matplotlib.path import Path as MPath
+
+    S = D.simplices
+    G = (P[S[:, 0]] + P[S[:, 1]] + P[S[:, 2]]) / 3
+    inside = MPath(np.array([coords[i] for i in outer])).contains_points(G)
+    for h in holes:
+        inside &= ~MPath(np.array([coords[i] for i in h])).contains_points(G)
     tris = []
-    for a, b, c in D.simplices:
+    for (a, b, c), ok in zip(S, inside):
         ia, ib, ic = pts_idx[a], pts_idx[b], pts_idx[c]
-        g = ((P[a][0] + P[b][0] + P[c][0]) / 3, (P[a][1] + P[b][1] + P[c][1]) / 3)
-        if point_in_ring(g, out_r) and not any(point_in_ring(g, h) for h in hole_r):
+        if ok:
             # 外周は反時計回りにそろえる
             if _cross(coords[ia], coords[ib], coords[ic]) < 0:
                 ib, ic = ic, ib
@@ -333,9 +365,9 @@ def delaunay_fill(outer, holes, coords, spacing=0.03):
 
 def build_glyph(ch, style):
     pen = None
-    for glyph, upem, fontpath in find_glyphs(ch, style):
+    for glyph, upem, fontpath, gs in find_glyphs(ch, style):
         try:
-            p = FlattenPen(None, step=upem * 0.02)
+            p = FlattenPen(gs, step=upem * 0.02)  # 組み合わせ文字（Ć など）の部品を読むためにフォントを渡す
             glyph.draw(p)
             pen = p
             break
