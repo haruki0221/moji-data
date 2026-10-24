@@ -55,6 +55,8 @@ STYLES = {
         FontSpec("/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"),
     ],
     "pop": [
+        FontSpec("/home/claude/moji/fonts/Fredoka-Bold.ttf"),
+        FontSpec("/home/claude/moji/fonts/MPLUSRounded1c-Black.ttf"),
         FontSpec("/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf"),
         FontSpec("/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc", 0),
         FontSpec("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
