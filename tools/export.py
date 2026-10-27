@@ -16,6 +16,7 @@
 使い方:
   python3 export.py <出力先> all                 … フォントに入っている全文字
   python3 export.py <出力先> 0020-007E 3040-309F … 範囲を指定
+  ONLY=pixel,black python3 export.py <出力先> all … 一部の字体だけ作り直す（index.json は他の字体を残して書き換える）
 """
 import json
 import os
@@ -28,7 +29,7 @@ import factory as F
 
 BLOCK = 64
 VERSION = 2
-STYLES = ["gothic", "mincho", "pop"]
+STYLES = ["gothic", "mincho", "pop", "pixel", "black"]
 
 
 def compact(g):
@@ -103,9 +104,18 @@ def parse_ranges(args):
 
 def main():
     out = sys.argv[1]
+    only = [x for x in os.environ.get("ONLY", "").split(",") if x] or STYLES
     index = {"version": VERSION, "block": BLOCK, "styles": {s: [] for s in STYLES}, "count": {}}
+    old = os.path.join(out, "index.json")
+    if os.path.exists(old):
+        with open(old) as f:
+            prev = json.load(f)
+        for s in STYLES:
+            if s not in only and s in prev.get("styles", {}):
+                index["styles"][s] = prev["styles"][s]
+                index["count"][s] = prev["count"].get(s, 0)
     jobs = []
-    for style in STYLES:
+    for style in only:
         cps = all_codepoints(style) if sys.argv[2:] == ["all"] else parse_ranges(sys.argv[2:])
         blocks = {}
         for cp in cps:

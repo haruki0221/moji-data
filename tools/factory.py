@@ -63,6 +63,30 @@ STYLES = {
         FontSpec("/usr/share/fonts/opentype/tlwg/Loma-Bold.otf"),
         FontSpec("/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"),
     ],
+    # ドット字：GNU Unifont（基本の文字は全部入っている）→ 日本の漢字 → 珍しい文字 → 無いものはゴシック
+    "pixel": [
+        FontSpec("/home/claude/moji/fonts/unifont.otf"),
+        FontSpec("/home/claude/moji/fonts/unifont_jp.otf"),
+        FontSpec("/home/claude/moji/fonts/unifont_upper.otf"),
+        FontSpec("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", 0),
+        FontSpec("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+    ],
+    # 極太：Noto の Black（いちばん太い版）を言語ごとに → 無いものはゴシック
+    "black": [
+        FontSpec("/home/claude/moji/fonts/NotoSans-Black.ttf"),
+        FontSpec("/usr/share/fonts/opentype/noto/NotoSansCJK-Black.ttc", 0),
+        *[
+            FontSpec(f"/home/claude/moji/fonts/NotoSans{s}-Black.ttf")
+            for s in (
+                "Arabic", "Hebrew", "Thai", "Devanagari", "Bengali", "Tamil", "Telugu", "Kannada", "Malayalam",
+                "Gujarati", "Gurmukhi", "Oriya", "Sinhala", "Armenian", "Georgian", "Khmer", "Lao", "Myanmar",
+                "Ethiopic", "Thaana", "Syriac", "Cherokee", "CanadianAboriginal", "Cham", "MeeteiMayek", "Symbols",
+            )
+        ],
+        FontSpec("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        FontSpec("/usr/share/fonts/opentype/tlwg/Loma-Bold.otf"),
+        FontSpec("/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"),
+    ],
 }
 
 _font_cache = {}

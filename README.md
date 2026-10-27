@@ -18,5 +18,7 @@
 | gothic | ゴシック |
 | mincho | 明朝 |
 | pop | 丸っこい太字 |
+| pixel | ドット字（GNU Unifont） |
+| black | 極太（Noto Sans Black 系） |
 
 ※ 今入っているのは試作用のフォントで作った約15万文字です（フォントは仮のもの）。
