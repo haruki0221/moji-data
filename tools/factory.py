@@ -92,6 +92,18 @@ STYLES = {
 _font_cache = {}
 
 
+# 形を加工して作る字体（どの言語でも使える）：元の字体のフォントで描いてから加工する
+#   italic  … 斜めにする（上ほど右へ）
+#   bubble  … 丸くふくらませる（ぷっくり）
+#   outline … ふちだけ残す（中が空洞＝軽い）
+EFFECTS = {"italic": "gothic", "bubble": "gothic", "outline": "black"}
+ITALIC_SLANT = math.tan(math.radians(13))
+BUBBLE_R = 0.065  # ふくらませる幅（スタッド）
+OUTLINE_W = 0.07  # ふちの太さ（スタッド）
+for _name, _base in EFFECTS.items():
+    STYLES[_name] = STYLES[_base]
+
+
 def load_font(spec):
     key = (spec.path, spec.index)
     if key not in _font_cache:
@@ -403,12 +415,15 @@ def build_glyph(ch, style):
         return {"c": ch, "style": style, "ok": False, "why": "no font"}
     k = EM_STUDS / upem
     raw = [[(x * k, -y * k) for x, y in c] for c in pen.contours if len(c) >= 3]  # z = 下向き
+    if style == "italic":
+        raw = [[(x - z * ITALIC_SLANT, z) for x, z in r] for r in raw]
     if not raw:
         return {"c": ch, "style": style, "ok": False, "why": "empty"}
 
     # --- 塗りをラスタにする（非ゼロ回転数ルール：線が重なって描かれていても正しく合成）
     allp = np.array([p for r in raw for p in r])
-    mn, mx = allp.min(0) - 0.05, allp.max(0) + 0.05
+    pad = 0.05 + (BUBBLE_R * 2 if style == "bubble" else 0)
+    mn, mx = allp.min(0) - pad, allp.max(0) + pad
     W, H = int((mx[0] - mn[0]) / MASK_RES) + 2, int((mx[1] - mn[1]) / MASK_RES) + 2
     wind = np.zeros((H, W), dtype=np.int16)
     for r in raw:
@@ -419,6 +434,18 @@ def build_glyph(ch, style):
         ImageDraw.Draw(layer).polygon([((x - mn[0]) / MASK_RES, (z - mn[1]) / MASK_RES) for x, z in r], fill=1)
         wind += np.array(layer, dtype=np.int16) * (1 if sa > 0 else -1)
     m = wind != 0
+    if style == "bubble":
+        r = int(round(BUBBLE_R / MASK_RES))
+        yy, xx = np.ogrid[-r : r + 1, -r : r + 1]
+        disk = xx * xx + yy * yy <= r * r
+        m = ndimage.binary_dilation(m, structure=disk)
+        m = ndimage.gaussian_filter(m.astype(np.float32), r * 0.6) > 0.5  # 角を丸く
+    elif style == "outline":
+        r = int(round(OUTLINE_W / MASK_RES))
+        yy, xx = np.ogrid[-r : r + 1, -r : r + 1]
+        disk = xx * xx + yy * yy <= r * r
+        inner = ndimage.binary_erosion(m, structure=disk)
+        m = m & ~inner
     area = float(m.sum()) * MASK_RES**2
     if area < MIN_AREA:
         return {"c": ch, "style": style, "ok": False, "why": "too small", "area": round(area, 4)}

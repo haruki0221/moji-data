@@ -29,7 +29,7 @@ import factory as F
 
 BLOCK = 64
 VERSION = 2
-STYLES = ["gothic", "mincho", "pop", "pixel", "black"]
+STYLES = ["gothic", "mincho", "pop", "pixel", "black", "bubble", "outline", "italic"]
 
 
 def compact(g):
