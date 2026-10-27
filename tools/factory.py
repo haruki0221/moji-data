@@ -100,6 +100,7 @@ EFFECTS = {"italic": "gothic", "bubble": "gothic", "outline": "black"}
 ITALIC_SLANT = math.tan(math.radians(13))
 BUBBLE_R = 0.065  # ふくらませる幅（スタッド）
 OUTLINE_W = 0.07  # ふちの太さ（スタッド）
+OUTLINE_SIMPLIFY = 0.02  # ふちだけの字体は輪郭が 2 重で点が多いので、少しだけ粗くする（データを小さくするため）
 for _name, _base in EFFECTS.items():
     STYLES[_name] = STYLES[_base]
 
@@ -467,7 +468,7 @@ def build_glyph(ch, style):
             ring = [((px + 0.5) * MASK_RES + mn[0], (py + 0.5) * MASK_RES + mn[1]) for px, py in pts[a:b]]
             if math.dist(ring[0], ring[-1]) < 1e-9:
                 ring = ring[:-1]
-            ring = rdp(ring, SIMPLIFY)
+            ring = rdp(ring, OUTLINE_SIMPLIFY if style == "outline" else SIMPLIFY)
             if len(ring) < 3 or abs(signed_area(ring)) < 1e-4:
                 ids_list.append(None)
                 continue
