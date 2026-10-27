@@ -19,8 +19,6 @@
 | mincho | 明朝 |
 | pop | 丸っこい太字 |
 | pixel | ドット字（GNU Unifont） |
-| black | 極太（Noto Sans Black 系） |
-| bubble | ぷっくり（gothic を丸くふくらませる） |
 | outline | ふちだけ（black の中を空洞にする） |
 | italic | 斜め（gothic を傾ける） |
 

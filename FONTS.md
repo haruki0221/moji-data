@@ -7,7 +7,7 @@
 - M PLUS Rounded 1c（POP の日本語）… SIL Open Font License 1.1
 - Poppins … SIL Open Font License 1.1
 - GNU Unifont / Unifont JP / Unifont Upper（PIXEL）… SIL Open Font License 1.1（GPL 2+ フォント例外付きと二重ライセンス）
-- Noto Sans Black / Noto Sans CJK Black / 各文字の Noto Sans ○○ Black（BLACK）… SIL Open Font License 1.1
+- Noto Sans Black / Noto Sans CJK Black / 各文字の Noto Sans ○○ Black（OUTLINE の元）… SIL Open Font License 1.1
 - DejaVu Sans / DejaVu Serif … Bitstream Vera / DejaVu License
 - Loma (TLWG) / FreeSans / FreeSerif (GNU FreeFont) … GPL（フォント例外付き）
 
@@ -19,7 +19,6 @@ BLACK は Noto Sans Black → Noto Sans CJK Black → アラビア文字・タ�
 
 強さ（面積・バランス・先端・タイプ）は字形から計算するので、同じ文字でも字体ごとに変わります。
 
-BUBBLE・OUTLINE・ITALIC はフォントを増やさず、形を加工して作っています（どの言語でも使えます）。
-- BUBBLE：SANS の形を丸くふくらませる
+OUTLINE・ITALIC はフォントを増やさず、形を加工して作っています（どの言語でも使えます）。
 - OUTLINE：BLACK の形のふちだけを残す（中が空洞なので軽い）
 - ITALIC：SANS の形を 13 度傾ける
