@@ -18,3 +18,8 @@ PIXEL は Unifont → Unifont JP → Unifont Upper → Noto Sans CJK → その�
 BLACK は Noto Sans Black → Noto Sans CJK Black → アラビア文字・タイ文字・デーヴァナーガリーなど各文字の Noto Sans Black → その他 の順です。
 
 強さ（面積・バランス・先端・タイプ）は字形から計算するので、同じ文字でも字体ごとに変わります。
+
+BUBBLE・OUTLINE・ITALIC はフォントを増やさず、形を加工して作っています（どの言語でも使えます）。
+- BUBBLE：SANS の形を丸くふくらませる
+- OUTLINE：BLACK の形のふちだけを残す（中が空洞なので軽い）
+- ITALIC：SANS の形を 13 度傾ける
