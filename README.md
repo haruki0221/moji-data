@@ -20,6 +20,6 @@
 | pop | 丸っこい太字 |
 | pixel | ドット字（GNU Unifont） |
 | outline | ふちだけ（black の中を空洞にする） |
-| italic | 斜め（gothic を傾ける） |
+| thin | 極細（Noto Sans Thin 系） |
 
 ※ 今入っているのは試作用のフォントで作った約15万文字です（フォントは仮のもの）。

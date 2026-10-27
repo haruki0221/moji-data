@@ -87,17 +87,29 @@ STYLES = {
         FontSpec("/usr/share/fonts/opentype/tlwg/Loma-Bold.otf"),
         FontSpec("/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"),
     ],
+    # 極細：Noto の Thin（いちばん細い版）を言語ごとに → 無いものは細めのフォント
+    "thin": [
+        FontSpec("/home/claude/moji/fonts/NotoSans-Thin.ttf"),
+        FontSpec("/usr/share/fonts/opentype/noto/NotoSansCJK-Thin.ttc", 0),
+        *[
+            FontSpec(f"/home/claude/moji/fonts/NotoSans{s}-Thin.ttf")
+            for s in (
+                "Arabic", "Hebrew", "Thai", "Devanagari", "Bengali", "Tamil", "Telugu", "Kannada", "Malayalam",
+                "Gujarati", "Gurmukhi", "Oriya", "Sinhala", "Armenian", "Georgian", "Khmer", "Lao", "Myanmar",
+                "Ethiopic", "Thaana", "Syriac", "Cherokee", "CanadianAboriginal", "Cham", "MeeteiMayek", "Symbols",
+            )
+        ],
+        FontSpec("/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf"),
+        FontSpec("/usr/share/fonts/truetype/freefont/FreeSans.ttf"),
+    ],
 }
 
 _font_cache = {}
 
 
 # 形を加工して作る字体（どの言語でも使える）：元の字体のフォントで描いてから加工する
-#   italic  … 斜めにする（上ほど右へ）
-#   bubble  … 丸くふくらませる（ぷっくり）
 #   outline … ふちだけ残す（中が空洞＝軽い）
-EFFECTS = {"italic": "gothic", "bubble": "gothic", "outline": "black"}
-ITALIC_SLANT = math.tan(math.radians(13))
+EFFECTS = {"outline": "black"}
 BUBBLE_R = 0.065  # ふくらませる幅（スタッド）
 OUTLINE_W = 0.07  # ふちの太さ（スタッド）
 OUTLINE_SIMPLIFY = 0.02  # ふちだけの字体は輪郭が 2 重で点が多いので、少しだけ粗くする（データを小さくするため）
@@ -416,8 +428,6 @@ def build_glyph(ch, style):
         return {"c": ch, "style": style, "ok": False, "why": "no font"}
     k = EM_STUDS / upem
     raw = [[(x * k, -y * k) for x, y in c] for c in pen.contours if len(c) >= 3]  # z = 下向き
-    if style == "italic":
-        raw = [[(x - z * ITALIC_SLANT, z) for x, z in r] for r in raw]
     if not raw:
         return {"c": ch, "style": style, "ok": False, "why": "empty"}
 
